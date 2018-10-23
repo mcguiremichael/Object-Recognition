@@ -9,13 +9,14 @@ NUM_CLASSES = 21
 
 class Classifier(nn.Module):
     def __init__(self, input_shape):
-        self.hidden = F.relu
+        self.hidden = F.leaky_relu
         self.input_shape = input_shape
         super(Classifier, self).__init__()
-        self.conv1 = nn.Conv2d(3, 32, 9, stride=2)
-        self.conv2 = nn.Conv2d(32, 32, 7, stride=2)
-        self.conv3 = nn.Conv2d(32, 32, 5, stride=2)
-        self.conv4 = nn.Conv2d(32, 32, 3)
+        self.conv1 = nn.Conv2d(3, 32, 9, stride=2, padding=4)
+        self.conv2 = nn.Conv2d(32, 32, 7, stride=2, padding=3)
+        self.conv3 = nn.Conv2d(32, 64, 5, stride=2, padding=2)
+        self.conv4 = nn.Conv2d(64, 64, 3, padding=1)
+        self.conv5 = nn.Conv2d(64, 64, 3, padding=1)
         self.pool = nn.MaxPool2d(2, 2)
         self.n_size = self.conv_output(self.input_shape) 
         
@@ -28,7 +29,7 @@ class Classifier(nn.Module):
         x = x.view(x.size()[0], self.n_size)
         x = self.hidden(self.fc1(x))
         x = self.hidden(self.fc2(x))
-        x = F.sigmoid(self.fc3(x))
+        x = self.fc3(x)
         return x
         
     def forward_conv(self, x):
@@ -36,6 +37,7 @@ class Classifier(nn.Module):
         x = self.hidden(self.conv2(x))
         x = self.hidden(self.conv3(x))
         x = self.hidden(self.conv4(x))
+        x = self.hidden(self.conv5(x))
         return x
         
     def conv_output(self, shape):
