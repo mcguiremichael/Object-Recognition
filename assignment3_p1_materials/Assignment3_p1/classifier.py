@@ -12,28 +12,30 @@ class Classifier(nn.Module):
         self.hidden = F.relu
         self.input_shape = input_shape
         super(Classifier, self).__init__()
-        self.conv1 = nn.Conv2d(3, 64, 5)
-        self.conv2 = nn.Conv2d(64, 64, 3)
-        self.conv3 = nn.Conv2d(64, 128, 3)
+        self.conv1 = nn.Conv2d(3, 32, 9, stride=2)
+        self.conv2 = nn.Conv2d(32, 32, 7, stride=2)
+        self.conv3 = nn.Conv2d(32, 32, 5, stride=2)
+        self.conv4 = nn.Conv2d(32, 32, 3)
         self.pool = nn.MaxPool2d(2, 2)
         self.n_size = self.conv_output(self.input_shape) 
         
-        self.fc1 = nn.Linear(self.n_size, 120)
-        self.fc2 = nn.Linear(120, 84)
-        self.fc3 = nn.Linear(84, NUM_CLASSES)
+        self.fc1 = nn.Linear(self.n_size, 512)
+        self.fc2 = nn.Linear(512, 256)
+        self.fc3 = nn.Linear(256, NUM_CLASSES)
 
     def forward(self, x):
         x = self.forward_conv(x)
         x = x.view(x.size()[0], self.n_size)
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        x = self.fc3(x)
+        x = self.hidden(self.fc1(x))
+        x = self.hidden(self.fc2(x))
+        x = F.sigmoid(self.fc3(x))
         return x
         
     def forward_conv(self, x):
-        x = self.pool(self.hidden(self.conv1(x)))
-        x = self.pool(self.hidden(self.conv2(x)))
-        x = self.pool(self.hidden(self.conv3(x)))
+        x = self.hidden(self.conv1(x))
+        x = self.hidden(self.conv2(x))
+        x = self.hidden(self.conv3(x))
+        x = self.hidden(self.conv4(x))
         return x
         
     def conv_output(self, shape):
