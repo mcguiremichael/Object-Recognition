@@ -12,17 +12,17 @@ class Classifier(nn.Module):
         self.hidden = F.leaky_relu
         self.input_shape = input_shape
         super(Classifier, self).__init__()
-        self.conv1 = nn.Conv2d(3, 32, 9, stride=2, padding=4)
-        self.conv2 = nn.Conv2d(32, 32, 7, stride=2, padding=3)
-        self.conv3 = nn.Conv2d(32, 64, 5, stride=2, padding=2)
-        self.conv4 = nn.Conv2d(64, 64, 3, padding=1)
-        self.conv5 = nn.Conv2d(64, 64, 3, padding=1)
+        self.conv1 = nn.Conv2d(3, 64, 7, stride=2, padding=4)
+        self.conv2 = nn.Conv2d(64, 64, 5, stride=2, padding=3)
+        self.conv3 = nn.Conv2d(64, 128, 3, stride=2, padding=2)
+        #self.conv4 = nn.Conv2d(32, 32, 3, padding=1)
+        #self.conv5 = nn.Conv2d(32, 32, 3, padding=1)
         self.pool = nn.MaxPool2d(2, 2)
         self.n_size = self.conv_output(self.input_shape) 
         
         self.fc1 = nn.Linear(self.n_size, 512)
-        self.fc2 = nn.Linear(512, 256)
-        self.fc3 = nn.Linear(256, NUM_CLASSES)
+        self.fc2 = nn.Linear(512, 512)
+        self.fc3 = nn.Linear(512, NUM_CLASSES)
 
     def forward(self, x):
         x = self.forward_conv(x)
@@ -33,11 +33,11 @@ class Classifier(nn.Module):
         return x
         
     def forward_conv(self, x):
-        x = self.hidden(self.conv1(x))
+        x = self.pool(self.hidden(self.conv1(x)))
         x = self.hidden(self.conv2(x))
         x = self.hidden(self.conv3(x))
-        x = self.hidden(self.conv4(x))
-        x = self.hidden(self.conv5(x))
+        #x = self.hidden(self.conv4(x))
+        #x = self.hidden(self.conv5(x))
         return x
         
     def conv_output(self, shape):
