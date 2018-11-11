@@ -12,19 +12,20 @@ class Classifier(nn.Module):
         self.hidden = F.relu
         self.input_shape = input_shape
         super(Classifier, self).__init__()
-        CONV1 = 16
-        CONV2 = 20
+        CONV1 = 20
+        CONV2 = 30
         CONV3 = 20
-        CONV4 = 20
+        CONV4 = 25
         self.conv1 = nn.Conv2d(3, CONV1, 7, stride=2, padding=3)
         self.conv1_bn = nn.BatchNorm2d(CONV1)
         self.conv2 = nn.Conv2d(CONV1, CONV2, 5, stride=2, padding=2)
         self.conv2_bn = nn.BatchNorm2d(CONV2)
+        """
         self.conv3 = nn.Conv2d(CONV2, CONV3, 4, stride=2, padding=2)
         self.conv3_bn = nn.BatchNorm2d(CONV3)
         self.conv4 = nn.Conv2d(CONV3, CONV4, 4, stride=2, padding=2)
         self.conv4_bn = nn.BatchNorm2d(CONV4)
-        
+        """     
         #self.conv4 = nn.Conv2d(32, 32, 3, padding=1)
         #self.conv5 = nn.Conv2d(32, 32, 3, padding=1)
         self.pool = nn.MaxPool2d(2, 2)
@@ -48,10 +49,10 @@ class Classifier(nn.Module):
         return x
         
     def forward_conv(self, x):
-        x = self.hidden(self.conv1_bn(self.conv1(x)))
-        x = self.hidden(self.conv2_bn(self.conv2(x)))
-        x = self.hidden(self.conv3_bn(self.conv3(x)))
-        x = self.hidden(self.conv4_bn(self.conv4(x)))
+        x = self.pool(self.hidden(self.conv1_bn(self.conv1(x))))
+        x = self.pool(self.hidden(self.conv2_bn(self.conv2(x))))
+        #x = self.hidden(self.conv3_bn(self.conv3(x)))
+        #x = self.hidden(self.conv4_bn(self.conv4(x)))
         #x = self.hidden(self.conv4(x))
         #x = self.hidden(self.conv5(x))
         return x
