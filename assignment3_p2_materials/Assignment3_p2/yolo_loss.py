@@ -307,6 +307,10 @@ class YoloLoss(nn.Module):
         regression_contains_object_mask[:,:,:,5:10] = second_box_responsible
         regression_contains_object_mask = regression_contains_object_mask * contains_object_mask.unsqueeze(3).expand(regression_contains_object_mask.size())
         """
+        extended_object_mask = contains_object_mask.unsqueeze(3).expand(boxes_pred_tensor[:,:,:,:5].size())
+        
+        first_box_responsible = first_box_responsible * contains_object_mask
+        second_box_responsible = second_box_responsible * contains_object_mask
         
         pb1 = (boxes_pred_tensor[:,:,:,:5])[first_box_responsible]
         pb2 = (boxes_pred_tensor[:,:,:,5:10])[second_box_responsible]
@@ -359,7 +363,8 @@ class YoloLoss(nn.Module):
         total_loss += regression_loss
         total_loss += conf_loss
         
-        return total_loss
+        print(class_prediction_loss.cpu().data.numpy(), no_object_loss.cpu().data.numpy(), regression_loss.cpu().data.numpy(), conf_loss.cpu().data.numpy())
+        return (1/N) * total_loss
 
 
 
