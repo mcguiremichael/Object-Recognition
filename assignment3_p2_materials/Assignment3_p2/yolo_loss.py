@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 import time
+import numpy as np
 
 class YoloLoss(nn.Module):
     def __init__(self,S,B,l_coord,l_noobj):
@@ -60,6 +61,7 @@ class YoloLoss(nn.Module):
         """
         #diff = classes_pred - classes_target       
         ##### CODE #####
+        #print("get_class_prediction_loss(), ", classes_pred.size(), classes_target.size())
         
         class_loss = self.loss(classes_pred, classes_target.detach())
         
@@ -78,6 +80,8 @@ class YoloLoss(nn.Module):
         reg_loss : scalar
         
         """
+        
+        #print("get_regression_loss(): ", box_pred_response.size(), box_target_response.size())
         
         ##### CODE #####
         coord_loss = self.loss(box_pred_response[:,0], box_target_response[:,0].detach()) + self.loss(box_pred_response[:,1], box_target_response[:,1].detach())
@@ -102,6 +106,7 @@ class YoloLoss(nn.Module):
         """
         
         ##### CODE #####
+        #print("get_contain_conf_loss(): ", box_pred_response.size(), box_target_response_iou.size())
         
         contain_loss = self.loss(box_pred_response, box_target_response_iou.detach())
         
@@ -142,8 +147,11 @@ class YoloLoss(nn.Module):
         result = self.loss(pred, targ.detach())
         return result
         """
+        
         pred = pred_tensor[no_object_mask]
         targ = target_tensor[no_object_mask]
+        
+        #print("get_no_object_loss(): ", pred.size(), targ.size())
         result = self.loss(pred, targ.detach())
         return self.l_noobj * result
         
@@ -187,15 +195,15 @@ class YoloLoss(nn.Module):
         
         
         for i in range(N):
-            iou = self.compute_iou(box_pred[i:i+2,:4], box_target[[i],:4])
+            iou = self.compute_iou(box_pred[2*i:2*i+2,:4], box_target[[2*i],:4])
             first_iou = iou[0][0]
             second_iou = iou[1][0]
             if first_iou >= second_iou:
-                coo_response_mask[i] = 1
-                box_target_iou[i] = first_iou
+                coo_response_mask[2*i] = 1
+                box_target_iou[2*i] = first_iou
             else:
-                coo_response_mask[i+1] = 1
-                box_target_iou[i+1] = second_iou
+                coo_response_mask[2*i+1] = 1
+                box_target_iou[2*i+1] = second_iou
         
         ##### CODE #####
 
@@ -238,6 +246,9 @@ class YoloLoss(nn.Module):
         
         contains_object_mask = ((boxes_target_tensor[:,:,:,4] + boxes_target_tensor[:,:,:,9]) > 0.0).to(self.device, dtype=torch.uint8)
         no_object_mask = ((boxes_target_tensor[:,:,:,4] + boxes_target_tensor[:,:,:,9]) == 0.0).to(self.device, dtype=torch.uint8)
+        
+        #print(torch.sum(contains_object_mask), torch.sum(no_object_mask), contains_object_mask.size())
+        
         ##### CODE #####
 
         # Create a tensor contains_object_pred that corresponds to 
@@ -296,7 +307,7 @@ class YoloLoss(nn.Module):
         ##### CODE #####
         
         
-        extended_object_mask = (1 - no_object_mask).unsqueeze(3).expand(classes_target_tensor.size())
+        extended_object_mask = contains_object_mask.unsqueeze(3).expand(classes_target_tensor.size())
         class_prediction_loss = self.get_class_prediction_loss(classes_pred_tensor[extended_object_mask], classes_target_tensor[extended_object_mask])
         
         
@@ -321,11 +332,6 @@ class YoloLoss(nn.Module):
         regr_in_targ = torch.cat((tb1, tb2), 0)
         
         regression_loss = self.get_regression_loss(regr_in_pred, regr_in_targ)
-        
-        
-        
-        
-        
         
         
         
@@ -354,16 +360,17 @@ class YoloLoss(nn.Module):
         conf_iou_in = box_target_iou[coo_response_mask]
         conf_in_target[:,4] = conf_iou_in
 
+
         conf_loss = self.get_contain_conf_loss(conf_in_pred, conf_in_target)
         
         
-        
-        total_loss = class_prediction_loss
+        total_loss = torch.zeros((1), device=self.device)
+        total_loss += class_prediction_loss
         total_loss += no_object_loss
         total_loss += regression_loss
         total_loss += conf_loss
         
-        print(class_prediction_loss.cpu().data.numpy(), no_object_loss.cpu().data.numpy(), regression_loss.cpu().data.numpy(), conf_loss.cpu().data.numpy())
+        print(np.array([class_prediction_loss.cpu().data.numpy(), no_object_loss.cpu().data.numpy(), regression_loss.cpu().data.numpy(), conf_loss.cpu().data.numpy()]))
         return (1/N) * total_loss
 
 
