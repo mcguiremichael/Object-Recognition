@@ -112,6 +112,7 @@ def voc_eval(preds, target, VOC_CLASSES=VOC_CLASSES, threshold=0.5, use_07_metri
         print('---class {} ap {}---'.format(class_, ap))
         aps += [ap]
     print('---map {}---'.format(np.mean(aps)))
+    return aps
 
     
     
@@ -153,7 +154,8 @@ def evaluate(model, test_dataset_file, test_loader=None):
             preds[class_name].append([image_id, prob, x1, y1, x2, y2])
             
 
-    voc_eval(preds, targets, VOC_CLASSES=VOC_CLASSES)
+    aps = voc_eval(preds, targets, VOC_CLASSES=VOC_CLASSES)
+    return aps
     
     
 
