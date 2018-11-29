@@ -69,8 +69,10 @@ def ls_discriminator_loss(scores_real, scores_fake):
     Outputs:
     - loss: A PyTorch Tensor containing the loss.
     """
+    targets_real = torch.ones(scores_real.shape).to(scores_real.device)
+    targets_fake = torch.zeros(scores_fake.shape).to(scores_fake.device)
     
-    loss = None
+    loss = 0.5 * ( torch.mean((scores_real - targets_real) ** 2) + torch.mean((scores_fake - targets_fake) ** 2) )
     ####################################
     #          YOUR CODE HERE          #
     ####################################
@@ -97,7 +99,8 @@ def ls_generator_loss(scores_fake):
     #          YOUR CODE HERE          #
     ####################################
     
-    
+    targets_fake = torch.ones(scores_fake.shape).to(scores_fake.device)
+    loss = 0.5 * torch.mean( (scores_fake - targets_fake) ** 2 )
     ##########       END      ##########
     
     return loss
