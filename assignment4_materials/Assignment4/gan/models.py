@@ -12,7 +12,7 @@ class Discriminator(torch.nn.Module):
         FILTERS_2 = 256
         FILTERS_3 = 512
         FILTERS_4 = 1024
-        FILTERS_5 = 1024
+        FILTERS_5 = 2048
         
         
         self.conv1 = torch.nn.Conv2d(input_channels,
