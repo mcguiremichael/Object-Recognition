@@ -12,6 +12,7 @@ class Discriminator(torch.nn.Module):
         FILTERS_2 = 256
         FILTERS_3 = 512
         FILTERS_4 = 1024
+        FILTERS_5 = 1024
         
         
         self.conv1 = torch.nn.Conv2d(input_channels,
@@ -45,6 +46,14 @@ class Discriminator(torch.nn.Module):
         self.conv4_bn = torch.nn.BatchNorm2d(FILTERS_4)
                                                                      
         self.conv5 = torch.nn.Conv2d(FILTERS_4,
+                                        FILTERS_5,
+                                        kernel_size=4,
+                                        padding=1,
+                                        stride=2)
+                                        
+        self.conv5_bn = torch.nn.BatchNorm2d(FILTERS_5)
+        
+        self.conv6 = torch.nn.Conv2d(FILTERS_5,
                                         1,
                                         kernel_size=4,
                                         padding=0,
@@ -64,7 +73,8 @@ class Discriminator(torch.nn.Module):
         x = self.activation(self.conv2_bn(self.conv2(x)),negative_slope=0.2)
         x = self.activation(self.conv3_bn(self.conv3(x)),negative_slope=0.2)
         x = self.activation(self.conv4_bn(self.conv4(x)),negative_slope=0.2)
-        x = self.activation(self.conv5(x),negative_slope=0.2)
+        x = self.activation(self.conv5_bn(self.conv5(x)),negative_slope=0.2)
+        x = self.conv6(x)
         
         ##########       END      ##########
         
@@ -79,10 +89,11 @@ class Generator(torch.nn.Module):
         ####################################
         #          YOUR CODE HERE          #
         ####################################
-        FILTERS_1 = 1024
-        FILTERS_2 = 512
-        FILTERS_3 = 256
-        FILTERS_4 = 128
+        FILTERS_1 = 2048
+        FILTERS_2 = 1024
+        FILTERS_3 = 512
+        FILTERS_4 = 256
+        FILTERS_5 = 128
         
         self.tconv1 = torch.nn.ConvTranspose2d(noise_dim,
                                                     FILTERS_1,
@@ -117,10 +128,19 @@ class Generator(torch.nn.Module):
         self.conv4_bn = torch.nn.BatchNorm2d(FILTERS_4)
         
         self.tconv5 = torch.nn.ConvTranspose2d(FILTERS_4,
+                                                    FILTERS_5,
+                                                    kernel_size=4,
+                                                    padding=1,
+                                                    stride=2)
+                                                    
+        self.conv5_bn = torch.nn.BatchNorm2d(FILTERS_5)
+        
+        self.tconv6 = torch.nn.ConvTranspose2d(FILTERS_5,
                                                     3,
                                                     kernel_size=4,
                                                     padding=1,
                                                     stride=2)
+                                                    
         
         self.activation = torch.nn.functional.leaky_relu
         
@@ -135,7 +155,8 @@ class Generator(torch.nn.Module):
         x = self.activation(self.conv2_bn(self.tconv2(x)),negative_slope=0.2)
         x = self.activation(self.conv3_bn(self.tconv3(x)),negative_slope=0.2)
         x = self.activation(self.conv4_bn(self.tconv4(x)),negative_slope=0.2)
-        x = torch.nn.functional.tanh(self.tconv5(x))
+        x = self.activation(self.conv5_bn(self.tconv5(x)),negative_slope=0.2)
+        x = torch.nn.functional.tanh(self.tconv6(x))
         
         ##########       END      ##########
         
