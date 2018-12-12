@@ -52,7 +52,8 @@ class RNN(nn.Module):
                                             
         else:
             return
-                                            
+                                          
+        self.model_type = model_type  
         self.output_layer = nn.Linear(hidden_size, output_size)
 
 
@@ -81,10 +82,9 @@ class RNN(nn.Module):
         ####################################
         #          YOUR CODE HERE          #
         ####################################
-
-        _, batch_size, h_size = hidden.shape
+        batch_size = input.shape[0]
         
-        embedded_input = self.input_layer(input).reshape((1, batch_size, h_size))
+        embedded_input = self.input_layer(input).reshape((1, batch_size, self.hidden_size))
         output, hidden = self.hidden_layer(embedded_input, hidden)
         output = self.output_layer(output)
         ##########       END      ##########
@@ -110,8 +110,10 @@ class RNN(nn.Module):
         ####################################
         #          YOUR CODE HERE          #
         ####################################
-        
-        hidden = torch.zeros((self.n_layers, batch_size, self.hidden_size)).to(device)
+        if (self.model_type == "lstm"):
+            hidden = None
+        else:
+            hidden = torch.zeros((self.n_layers, batch_size, self.hidden_size)).to(device)
 
         ##########       END      ##########
 
