@@ -137,7 +137,7 @@ class Agent():
                 
                 
                 ### Compute ratios
-                ratio = (curr_prob_select / old_prob_select.detach() + self.eps_denom)
+                ratio = torch.exp(torch.log(curr_prob_select) - torch.log(old_prob_select.detach()))
                 ratio_adv = ratio * advantages
                 bounded_adv = torch.clamp(ratio, 1 - clip_param, 1 + clip_param) * advantages
                 
