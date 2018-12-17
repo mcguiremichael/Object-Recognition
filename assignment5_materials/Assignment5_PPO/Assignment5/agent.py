@@ -16,19 +16,20 @@ class Agent():
         self.load_model = False
 
         self.action_size = action_size
-        self.loss = nn.MSELoss()
+        self.loss = nn.SmoothL1Loss()
 
         # These are hyper parameters for the DQN
         self.discount_factor = 0.99
         self.lam = 0.995
         self.epsilon = 1.0
         self.epsilon_min = 0.05
-        self.eps_denom = 1e-8
+        self.eps_denom = 1e-4
         self.explore_step = 1000000
         self.epsilon_decay = (self.epsilon - self.epsilon_min) / self.explore_step
         self.train_start = 100000
         self.update_target = 1000
-        self.c1 = 1.0
+        self.c1 = 1.0       # Weight for value loss
+        self.c2 = 0.01      # Weight for entropy loss
         self.num_epochs = 3
 
         # Generate the memory
@@ -71,6 +72,9 @@ class Agent():
 
         return i
         
+    def entropy(self, probs):
+        return -(torch.sum(probs * torch.log(probs), 1)).mean()
+        
     def train_policy_net(self, frame):
     
         print("Training network")
@@ -88,6 +92,7 @@ class Agent():
             
             pol_loss = 0.0
             vf_loss = 0.0
+            ent_total = 0.0
         
             for i in range(num_iters):
                 
@@ -126,13 +131,13 @@ class Agent():
                 old_probs, old_vals = self.target_net(states)
                 
                 
-                curr_probs = curr_probs.gather(1, actions).reshape((n,))
-                old_probs = old_probs.gather(1, actions).reshape((n,))
+                curr_prob_select = curr_probs.gather(1, actions).reshape((n,))
+                old_prob_select = old_probs.gather(1, actions).reshape((n,))
                 
                 
                 
                 ### Compute ratios
-                ratio = (curr_probs / old_probs.detach() + self.eps_denom)
+                ratio = (curr_prob_select / old_prob_select.detach() + self.eps_denom)
                 ratio_adv = ratio * advantages
                 bounded_adv = torch.clamp(ratio, 1 - clip_param, 1 + clip_param) * advantages
                 
@@ -141,7 +146,9 @@ class Agent():
                 ### Compute value and loss
                 value_loss = self.loss(curr_vals, v_returns.detach())
                 
-                total_loss = pol_avg + self.c1 * value_loss
+                ent = self.entropy(curr_probs)
+
+                total_loss = pol_avg + self.c1 * value_loss - self.c2 * ent
                 
                 self.optimizer.zero_grad()
                 total_loss.backward()
@@ -149,11 +156,12 @@ class Agent():
                 
                 pol_loss += pol_avg.detach().cpu()[0]
                 vf_loss += value_loss.detach().cpu()[0]
-                
+                ent_total += ent.detach().cpu()[0]
                 
             pol_loss /= num_iters
             vf_loss /= num_iters
-            print("Policy loss: %f. Value loss: %f." % (pol_loss, vf_loss))
+            ent_total /= num_iters
+            print("Policy loss: %f. Value loss: %f. Entropy: %f." % (pol_loss, vf_loss, ent_total))
         
 
 
