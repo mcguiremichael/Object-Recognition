@@ -23,7 +23,7 @@ class Agent():
         self.lam = 0.995
         self.epsilon = 1.0
         self.epsilon_min = 0.05
-        self.eps_denom = 1e-4
+        self.eps_denom = 1e-2
         self.explore_step = 1000000
         self.epsilon_decay = (self.epsilon - self.epsilon_min) / self.explore_step
         self.train_start = 100000
@@ -140,7 +140,7 @@ class Agent():
                 
                 
                 ### Compute ratios
-                ratio = torch.exp(torch.log(curr_prob_select) - torch.log(old_prob_select.detach()))
+                ratio = torch.exp(torch.log(curr_prob_select) - torch.log(old_prob_select.detach() + self.eps_denom))
                 ratio_adv = ratio * advantages
                 bounded_adv = torch.clamp(ratio, 1 - clip_param, 1 + clip_param) * advantages
                 
@@ -161,7 +161,7 @@ class Agent():
                 
                 self.optimizer.zero_grad()
                 total_loss.backward()
-                self.clip_gradients(0.01)
+                self.clip_gradients(0.1)
                 self.optimizer.step()
                 
                 pol_loss += pol_avg.detach().cpu()[0]
