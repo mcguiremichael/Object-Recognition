@@ -9,6 +9,7 @@ from memory import ReplayMemory
 from model import *
 from utils import *
 from config import *
+import time
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 class Agent():
@@ -23,14 +24,14 @@ class Agent():
         self.lam = 0.995
         self.epsilon = 1.0
         self.epsilon_min = 0.05
-        self.eps_denom = 1e-2
+        self.eps_denom = 1e-4
         self.explore_step = 1000000
         self.epsilon_decay = (self.epsilon - self.epsilon_min) / self.explore_step
         self.train_start = 100000
         self.update_target = 1000
         self.c1 = 1.0       # Weight for value loss
         self.c2 = 0.01      # Weight for entropy loss
-        self.num_epochs = 3
+        self.num_epochs = 5
 
         # Generate the memory
         self.memory = ReplayMemory()
@@ -93,8 +94,26 @@ class Agent():
             pol_loss = 0.0
             vf_loss = 0.0
             ent_total = 0.0
+            
+            
+            """
+            Added for slowdown debugging
+            
+            """
+            loading_time = 0.0
+            forward_time = 0.0
+            loss_time = 0.0
+            clipping_time = 0.0
+            backward_time = 0.0
+            step_time = 0.0
+            
+            
         
             for i in range(num_iters):
+                
+                # Loading time begin
+                t1 = time.time() 
+                
                 
                 mini_batch = self.memory.sample_mini_batch(frame)
                 mini_batch = np.array(mini_batch).transpose()
@@ -120,11 +139,20 @@ class Agent():
                 v_returns = torch.from_numpy(v_returns).to(device)
                 advantages = torch.from_numpy(advantages).to(device)
                 
+                
+               
+                
+                
                 # Normalize advantages
                 advantages = (advantages - advantages.mean()) / (advantages.std() + self.eps_denom)
                 
                 
+                # Loading time end
+                loading_time += (time.time() - t1)
                 
+                # Forward time begin
+                t1 = time.time()
+               
                 ### Get probs, val from current state for curr, old policies
                 n = states.shape[0]
                 actions = actions.reshape((n, 1))
@@ -137,7 +165,12 @@ class Agent():
                 curr_prob_select = curr_probs.gather(1, actions).reshape((n,))
                 old_prob_select = old_probs.gather(1, actions).reshape((n,))
                 
+                # Forward time end
+                forward_time += (time.time() - t1)
                 
+                
+                # Loss time begin
+                t1 = time.time()
                 
                 ### Compute ratios
                 ratio = torch.exp(torch.log(curr_prob_select) - torch.log(old_prob_select.detach() + self.eps_denom))
@@ -159,10 +192,35 @@ class Agent():
 
                 total_loss = pol_avg + self.c1 * value_loss - self.c2 * ent
                 
+                # Loss time end
+                loss_time += (time.time() - t1)
+                
+                # backward time begin
+                t1 = time.time()
+                
                 self.optimizer.zero_grad()
                 total_loss.backward()
-                self.clip_gradients(0.1)
+                
+                #backward time end
+                backward_time += (time.time() - t1)
+                
+                # Clipping time begin
+                t1 = time.time()
+                
+                self.clip_gradients(1.0)
+                
+                # Clipping time end
+                clipping_time += (time.time() - t1)
+                
+                
+                # step time begin
+                t1 = time.time()
+                
                 self.optimizer.step()
+                
+                # step time end
+                step_time += (time.time() - t1)
+                
                 
                 pol_loss += pol_avg.detach().cpu()[0]
                 vf_loss += value_loss.detach().cpu()[0]
@@ -171,7 +229,14 @@ class Agent():
             pol_loss /= num_iters
             vf_loss /= num_iters
             ent_total /= num_iters
-            print("Policy loss: %f. Value loss: %f. Entropy: %f." % (pol_loss, vf_loss, ent_total))
+            print("Policy loss: %f. Value loss: %f. Entropy: %f.\n" % (pol_loss, vf_loss, ent_total))
+            
+            
+            """
+            total_time = loading_time + forward_time + loss_time + clipping_time + backward_time + step_time
+            
+            print("load: %f\nforward: %f\nloss: %f\nclip: %f\nbackward: %f\nstep: %f\ntotal: %f\n" % (loading_time, forward_time, loss_time, clipping_time, backward_time, step_time, total_time))
+            """
         
     def clip_gradients(self, clip):
         
