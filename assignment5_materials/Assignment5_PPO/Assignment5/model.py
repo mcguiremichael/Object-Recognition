@@ -42,7 +42,7 @@ class PPO(nn.Module):
         x = F.relu(self.fc(x.view(x.size(0), -1)))
         x = self.head(x)
         
-        probs = F.softmax(x[:,:self.action_size])
+        probs = F.softmax(x[:,:self.action_size] - torch.max(x[:,:self.action_size],0)[0])
         val = x[:,-1]
         
         return probs, val

@@ -120,6 +120,9 @@ class Agent():
                 v_returns = torch.from_numpy(v_returns).to(device)
                 advantages = torch.from_numpy(advantages).to(device)
                 
+                # Normalize advantages
+                advantages = (advantages - advantages.mean()) / (advantages.std() + self.eps_denom)
+                
                 
                 
                 ### Get probs, val from current state for curr, old policies
@@ -141,8 +144,14 @@ class Agent():
                 ratio_adv = ratio * advantages
                 bounded_adv = torch.clamp(ratio, 1 - clip_param, 1 + clip_param) * advantages
                 
-                pol_avg = -torch.min(ratio_adv, bounded_adv).mean()
                 
+                      
+                pol_avg = -torch.min(ratio_adv, bounded_adv).mean()
+
+                """
+                if (i == 0):
+                    print(ratio, ratio_adv, bounded_adv, pol_avg)  
+                """
                 ### Compute value and loss
                 value_loss = self.loss(curr_vals, v_returns.detach())
                 
@@ -152,6 +161,7 @@ class Agent():
                 
                 self.optimizer.zero_grad()
                 total_loss.backward()
+                self.clip_gradients(0.01)
                 self.optimizer.step()
                 
                 pol_loss += pol_avg.detach().cpu()[0]
@@ -163,7 +173,14 @@ class Agent():
             ent_total /= num_iters
             print("Policy loss: %f. Value loss: %f. Entropy: %f." % (pol_loss, vf_loss, ent_total))
         
-
+    def clip_gradients(self, clip):
+        
+        ### Clip the gradients of self.policy_net
+        for param in self.policy_net.parameters():
+            if param.grad is None:
+                continue
+            param.grad.data = param.grad.data.clamp(-clip, clip)
+        
 
 
 
