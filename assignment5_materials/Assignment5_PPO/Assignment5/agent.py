@@ -24,7 +24,7 @@ class Agent():
         self.lam = 0.995
         self.epsilon = 1.0
         self.epsilon_min = 0.05
-        self.eps_denom = 1e-4
+        self.eps_denom = 1e-8
         self.explore_step = 1000000
         self.epsilon_decay = (self.epsilon - self.epsilon_min) / self.explore_step
         self.train_start = 100000
@@ -207,7 +207,7 @@ class Agent():
                 # Clipping time begin
                 t1 = time.time()
                 
-                self.clip_gradients(1.0)
+                #self.clip_gradients(1.0)
                 
                 # Clipping time end
                 clipping_time += (time.time() - t1)
@@ -229,7 +229,7 @@ class Agent():
             pol_loss /= num_iters
             vf_loss /= num_iters
             ent_total /= num_iters
-            print("Policy loss: %f. Value loss: %f. Entropy: %f.\n" % (pol_loss, vf_loss, ent_total))
+            print("Policy loss: %f. Value loss: %f. Entropy: %f." % (pol_loss, vf_loss, ent_total))
             
             
             """
