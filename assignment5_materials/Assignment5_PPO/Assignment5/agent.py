@@ -21,10 +21,10 @@ class Agent():
 
         # These are hyper parameters for the DQN
         self.discount_factor = 0.99
-        self.lam = 0.95
+        self.lam = 0.995
         self.epsilon = 1.0
         self.epsilon_min = 0.05
-        self.eps_denom = 1e-4
+        self.eps_denom = 1e-8
         self.explore_step = 1000000
         self.epsilon_decay = (self.epsilon - self.epsilon_min) / self.explore_step
         self.train_start = 100000
@@ -160,7 +160,7 @@ class Agent():
                 
                 
                 # Normalize advantages
-                advantages = (advantages - advantages.mean()) / (advantages.std() + self.eps_denom)
+                #advantages = (advantages - advantages.mean()) / (advantages.std() + self.eps_denom)
                 
                 
                 # Loading time end
@@ -245,7 +245,7 @@ class Agent():
             pol_loss /= num_iters
             vf_loss /= num_iters
             ent_total /= num_iters
-            print("Iteration %d: Policy loss: %f. Value loss: %f. Entropy: %f." % (self.num_epochs_trained, pol_loss, vf_loss, ent_total))
+            #print("Iteration %d: Policy loss: %f. Value loss: %f. Entropy: %f." % (self.num_epochs_trained, pol_loss, vf_loss, ent_total))
             
             
             """
