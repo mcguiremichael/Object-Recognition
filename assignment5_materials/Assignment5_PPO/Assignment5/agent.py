@@ -21,10 +21,10 @@ class Agent():
 
         # These are hyper parameters for the DQN
         self.discount_factor = 0.99
-        self.lam = 0.995
+        self.lam = 0.95
         self.epsilon = 1.0
         self.epsilon_min = 0.05
-        self.eps_denom = 1e-8
+        self.eps_denom = 1e-4
         self.explore_step = 1000000
         self.epsilon_decay = (self.epsilon - self.epsilon_min) / self.explore_step
         self.train_start = 100000
@@ -32,6 +32,7 @@ class Agent():
         self.c1 = 1.0       # Weight for value loss
         self.c2 = 0.01      # Weight for entropy loss
         self.num_epochs = 3
+        self.num_epochs_trained = 0
 
         # Generate the memory
         self.memory = ReplayMemory()
@@ -43,6 +44,16 @@ class Agent():
         self.target_net.to(device)
 
         self.optimizer = optim.Adam(params=self.policy_net.parameters(), lr=learning_rate)
+        
+        # Added for learning rate decay
+        self.lr_min = learning_rate / 10
+        self.clip_min = clip_param / 10
+        self.clip_param = clip_param
+        self.decay_rate = 25000
+        
+        
+        self.lambda1 = lambda epoch: self.lr_min + (learning_rate - self.lr_min) * ((self.decay_rate - self.num_epochs_trained) / self.decay_rate)
+        self.scheduler = optim.lr_scheduler.LambdaLR(self.optimizer, lr_lambda=[self.lambda1])
 
         # initialize target net
         self.update_target_net()
@@ -89,7 +100,6 @@ class Agent():
         
         
         for i in range(self.num_epochs):
-            print("Iteration %d" % (i+1))
             
             pol_loss = 0.0
             vf_loss = 0.0
@@ -107,9 +117,15 @@ class Agent():
             backward_time = 0.0
             step_time = 0.0
             
-            
+            self.num_epochs_trained += 1
         
             for i in range(num_iters):
+                
+                if (self.num_epochs_trained < self.decay_rate):
+                    self.scheduler.step()
+                    self.clip_param = self.clip_min + (clip_param - self.clip_min) * ((self.decay_rate - self.num_epochs_trained) / self.decay_rate)
+                
+                
                 
                 # Loading time begin
                 t1 = time.time() 
@@ -229,7 +245,7 @@ class Agent():
             pol_loss /= num_iters
             vf_loss /= num_iters
             ent_total /= num_iters
-            print("Policy loss: %f. Value loss: %f. Entropy: %f." % (pol_loss, vf_loss, ent_total))
+            print("Iteration %d: Policy loss: %f. Value loss: %f. Entropy: %f." % (self.num_epochs_trained, pol_loss, vf_loss, ent_total))
             
             
             """
