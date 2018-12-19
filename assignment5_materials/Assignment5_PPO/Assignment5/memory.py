@@ -17,7 +17,7 @@ class ReplayMemory(object):
         self.memory.append([history, action, reward, done, vtarg, ret, adv])
         
     def update_indices(self):
-        self.indices = list(range(Memory_capacity))
+        self.indices = list(range(Memory_capacity - (HISTORY_SIZE+1)))
         random.shuffle(self.indices)
 
     def sample_mini_batch(self, frame):
@@ -36,8 +36,11 @@ class ReplayMemory(object):
 
         # history size
         sample_range -= (HISTORY_SIZE + 1)
+        
+        lower = batch_size*self.access_num
+        upper = min((batch_size*(self.access_num+1))-1, Memory_capacity - (HISTORY_SIZE+1))
 
-        idx_sample = self.indices[batch_size*self.access_num:((batch_size+1)*self.access_num)-1]
+        idx_sample = self.indices[lower:upper]
         for i in idx_sample:
             sample = []
             for j in range(HISTORY_SIZE + 1):

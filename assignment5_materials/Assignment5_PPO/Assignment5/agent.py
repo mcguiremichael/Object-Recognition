@@ -31,7 +31,7 @@ class Agent():
         self.update_target = 1000
         self.c1 = 1.0       # Weight for value loss
         self.c2 = 0.01      # Weight for entropy loss
-        self.num_epochs = 5
+        self.num_epochs = 3
 
         # Generate the memory
         self.memory = ReplayMemory()
