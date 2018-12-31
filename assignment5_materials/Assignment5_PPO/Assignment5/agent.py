@@ -10,6 +10,7 @@ from model import *
 from utils import *
 from config import *
 import time
+import matplotlib.pyplot as plt
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 class Agent():
@@ -21,7 +22,7 @@ class Agent():
 
         # These are hyper parameters for the DQN
         self.discount_factor = 0.99
-        self.lam = 0.995
+        self.lam = 0.95
         self.epsilon = 1.0
         self.epsilon_min = 0.05
         self.eps_denom = 1e-8
@@ -29,7 +30,7 @@ class Agent():
         self.epsilon_decay = (self.epsilon - self.epsilon_min) / self.explore_step
         self.train_start = 100000
         self.update_target = 1000
-        self.c1 = 1.0       # Weight for value loss
+        self.c1 = 1.0      # Weight for value loss
         self.c2 = 0.01      # Weight for entropy loss
         self.num_epochs = 3
         self.num_epochs_trained = 0
@@ -49,11 +50,9 @@ class Agent():
         self.lr_min = learning_rate / 10
         self.clip_min = clip_param / 10
         self.clip_param = clip_param
-        self.decay_rate = 25000
+        self.decay_rate = 30000
         
         
-        self.lambda1 = lambda epoch: self.lr_min + (learning_rate - self.lr_min) * ((self.decay_rate - self.num_epochs_trained) / self.decay_rate)
-        self.scheduler = optim.lr_scheduler.LambdaLR(self.optimizer, lr_lambda=[self.lambda1])
 
         # initialize target net
         self.update_target_net()
@@ -70,7 +69,7 @@ class Agent():
         state = torch.from_numpy(state).to(device).unsqueeze(0)
         probs, val = self.policy_net(state)
         probs = probs.detach().cpu().numpy()[0]
-        val = val.detach().cpu().numpy()
+        val = val.detach().cpu().numpy()[0]
         action = self.select_action(probs)
         return action, val
         
@@ -87,18 +86,29 @@ class Agent():
     def entropy(self, probs):
         return -(torch.sum(probs * torch.log(probs), 1)).mean()
         
-    def train_policy_net(self, frame):
+    def train_policy_net(self, frame, frame_next_val):
     
-        print("Training network")
-    
+        
+        
+        for param_group in self.optimizer.param_groups:
+            curr_lr = param_group['lr']
+        print("Training network. lr: %f. clip: %f" % (curr_lr, self.clip_param))
+        
+        
+        
+        
         # Memory computes targets for value network, and advantag es for policy iteration
-        self.memory.compute_vtargets_adv(self.discount_factor, self.lam)
+        self.memory.compute_vtargets_adv(self.discount_factor, self.lam, frame_next_val)
+        
+        
         
         # Should be integer. len(self.memory) should be a multiple of batch_size.
         num_iters = int(len(self.memory) / batch_size)
         
-        
-        
+        """
+        lambda1 = lambda epoch: self.lr_min + (learning_rate - self.lr_min) * ((self.decay_rate - self.num_epochs_trained) / self.decay_rate)
+        scheduler = optim.lr_scheduler.LambdaLR(self.optimizer, lr_lambda=[lambda1])
+        """
         for i in range(self.num_epochs):
             
             pol_loss = 0.0
@@ -118,12 +128,18 @@ class Agent():
             step_time = 0.0
             
             self.num_epochs_trained += 1
+            
+            
+            if (self.num_epochs_trained < self.decay_rate and self.num_epochs_trained % 50 == 0):
+                new_lr = self.lr_min + (learning_rate - self.lr_min) * ((self.decay_rate - self.num_epochs_trained) / self.decay_rate)
+                del self.optimizer
+                self.optimizer = optim.Adam(params=self.policy_net.parameters(), lr=new_lr)
+                self.clip_param = self.clip_min + (clip_param - self.clip_min) * ((self.decay_rate - self.num_epochs_trained) / self.decay_rate)
+            
+        
         
             for i in range(num_iters):
                 
-                if (self.num_epochs_trained < self.decay_rate):
-                    self.scheduler.step()
-                    self.clip_param = self.clip_min + (clip_param - self.clip_min) * ((self.decay_rate - self.num_epochs_trained) / self.decay_rate)
                 
                 
                 
@@ -160,7 +176,7 @@ class Agent():
                 
                 
                 # Normalize advantages
-                #advantages = (advantages - advantages.mean()) / (advantages.std() + self.eps_denom)
+                advantages = (advantages - advantages.mean()) / (advantages.std() + self.eps_denom)
                 
                 
                 # Loading time end
@@ -190,12 +206,12 @@ class Agent():
                 
                 ### Compute ratios
                 ratio = torch.exp(torch.log(curr_prob_select) - torch.log(old_prob_select.detach() + self.eps_denom))
-                ratio_adv = ratio * advantages
-                bounded_adv = torch.clamp(ratio, 1 - clip_param, 1 + clip_param) * advantages
+                ratio_adv = ratio * advantages.detach()
+                bounded_adv = torch.clamp(ratio, 1 - clip_param, 1 + clip_param) * advantages.detach()
                 
                 
                       
-                pol_avg = -torch.min(ratio_adv, bounded_adv).mean()
+                pol_avg = - ((torch.min(ratio_adv, bounded_adv)).mean())
 
                 """
                 if (i == 0):
@@ -245,7 +261,7 @@ class Agent():
             pol_loss /= num_iters
             vf_loss /= num_iters
             ent_total /= num_iters
-            #print("Iteration %d: Policy loss: %f. Value loss: %f. Entropy: %f." % (self.num_epochs_trained, pol_loss, vf_loss, ent_total))
+            print("Iteration %d: Policy loss: %f. Value loss: %f. Entropy: %f." % (self.num_epochs_trained, pol_loss, vf_loss, ent_total))
             
             
             """
@@ -261,6 +277,18 @@ class Agent():
             if param.grad is None:
                 continue
             param.grad.data = param.grad.data.clamp(-clip, clip)
+            
+    def displayStack(self, state):
+        #state = state.reshape(INPUT_SHAPE)
+        self.displayImage(state[0,:,:])
+        self.displayImage(state[1,:,:])
+        self.displayImage(state[2,:,:])
+        self.displayImage(state[3,:,:])
+        
+
+    def displayImage(self, image):
+        plt.imshow(image)
+        plt.show()
         
 
 

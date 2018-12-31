@@ -36,13 +36,13 @@ class PPO(nn.Module):
         self.head = nn.Linear(512, action_size+1)
         
     def forward(self, x):
-        x = F.relu(self.bn1(self.conv1(x)))
-        x = F.relu(self.bn2(self.conv2(x)))
-        x = F.relu(self.bn3(self.conv3(x)))
-        x = F.relu(self.fc(x.view(x.size(0), -1)))
+        x = F.leaky_relu(self.bn1(self.conv1(x)))
+        x = F.leaky_relu(self.bn2(self.conv2(x)))
+        x = F.leaky_relu(self.bn3(self.conv3(x)))
+        x = F.leaky_relu(self.fc(x.view(x.size(0), -1)))
         x = self.head(x)
         
-        probs = F.softmax(x[:,:self.action_size] - torch.max(x[:,:self.action_size],0)[0])
+        probs = F.softmax(x[:,:self.action_size] - torch.max(x[:,:self.action_size],1)[0].unsqueeze(1))
         val = x[:,-1]
         
         return probs, val

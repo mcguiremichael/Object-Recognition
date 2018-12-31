@@ -38,7 +38,7 @@ class ReplayMemory(object):
         sample_range -= (HISTORY_SIZE + 1)
         
         lower = batch_size*self.access_num
-        upper = min((batch_size*(self.access_num+1))-1, Memory_capacity - (HISTORY_SIZE+1))
+        upper = min((batch_size*(self.access_num+1)), sample_range)
 
         idx_sample = self.indices[lower:upper]
         for i in idx_sample:
@@ -53,19 +53,21 @@ class ReplayMemory(object):
         if (self.access_num == 0):
             self.update_indices()
 
+
         return mini_batch
         
         
-    def compute_vtargets_adv(self, gamma, lam):
+    def compute_vtargets_adv(self, gamma, lam, frame_next_val):
         N = len(self)
         
         prev_gae_t = 0
+       
         
         for i in reversed(range(N)):
             
             if i+1 == N:
-                vnext = 0
-                nonterminal = 0
+                vnext = frame_next_val
+                nonterminal = 1
             else:
                 vnext = self.memory[i+1][4]
                 nonterminal = 1 - self.memory[i+1][3]    # 1 - done
@@ -74,9 +76,22 @@ class ReplayMemory(object):
             self.memory[i][6] = gae_t    # advantage
             self.memory[i][5] = gae_t + self.memory[i][4]  # advantage + value
             prev_gae_t = gae_t
-            
-            
-
+        
+        """
+        vnext = self.memory[-1][4]
+        nonterminal = 1 - self.memory[-1][3]
+        for i in reversed(range(N-1)):
+            delta = self.memory[i][2] + gamma * vnext * nonterminal - self.memory[i][4]
+            gae_t = delta + gamma * lam * nonterminal * prev_gae_t
+            self.memory[i][6] = gae_t    # advantage
+            self.memory[i][5] = gae_t + self.memory[i][4]  # advantage + value
+            prev_gae_t = gae_t
+        """
+        
+        """
+        for i in range(len(self.memory)):
+            print(self.memory[i][2:])
+        """
 
     def __len__(self):
         return len(self.memory)

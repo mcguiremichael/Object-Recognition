@@ -8,7 +8,7 @@ evaluation_reward_length = 100
 render_breakout = True
 batch_size = 32
 Update_target_network_frequency = 1000
-train_frame = 1024
+train_frame = 2048
 Memory_capacity = train_frame
 clip_param = 0.1
 

@@ -10,3 +10,4 @@ render_breakout = True
 batch_size = 32
 Update_target_network_frequency = 1000
 train_frame = 100000
+train_freq = 1
