@@ -26,6 +26,11 @@ action_size = env.action_space.n
 rewards, episodes = [], []
 
 agent = Agent(action_size)
+
+# Added to continue training
+#agent.policy_net = torch.load("./save_model/spaceinvaders_ppo")
+#agent.update_target_net()
+
 evaluation_reward = deque(maxlen=evaluation_reward_length)
 frame = 0
 memory_size = 0
@@ -82,8 +87,8 @@ for e in range(EPISODES):
             print('now time : ', datetime.now())
             rewards.append(np.mean(evaluation_reward))
             episodes.append(e)
-            pylab.plot(episodes, rewards, 'b')
-            pylab.savefig("./save_graph/spaceinvaders_ppo.png")
+            #pylab.plot(episodes, rewards, 'b')
+            #pylab.savefig("./save_graph/spaceinvaders_ppo.png")
             torch.save(agent.policy_net, "./save_model/spaceinvaders_ppo")
 
         if done:

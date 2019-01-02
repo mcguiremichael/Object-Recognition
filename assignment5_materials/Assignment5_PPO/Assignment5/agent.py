@@ -25,7 +25,7 @@ class Agent():
         self.lam = 0.95
         self.epsilon = 1.0
         self.epsilon_min = 0.05
-        self.eps_denom = 1e-8
+        self.eps_denom = 1e-4
         self.explore_step = 1000000
         self.epsilon_decay = (self.epsilon - self.epsilon_min) / self.explore_step
         self.train_start = 100000
@@ -50,7 +50,7 @@ class Agent():
         self.lr_min = learning_rate / 10
         self.clip_min = clip_param / 10
         self.clip_param = clip_param
-        self.decay_rate = 30000
+        self.decay_rate = 15000
         
         
 
@@ -77,7 +77,7 @@ class Agent():
         candidate = random.random()
         total = probs[0]
         i = 0
-        while (total < candidate and total < 1.0):
+        while (total < candidate and total < 1.0 and i < len(probs)):
             i += 1
             total += probs[i]
 
