@@ -57,9 +57,6 @@ class Agent():
         # initialize target net
         self.update_target_net()
 
-        if self.load_model:
-            self.policy_net = torch.load('save_model/breakout_dqn')
-
     # after some time interval update the target net to be same with policy net
     def update_target_net(self):
         self.target_net.load_state_dict(self.policy_net.state_dict())
@@ -207,7 +204,7 @@ class Agent():
                 ### Compute ratios
                 ratio = torch.exp(torch.log(curr_prob_select) - torch.log(old_prob_select.detach() + self.eps_denom))
                 ratio_adv = ratio * advantages.detach()
-                bounded_adv = torch.clamp(ratio, 1 - clip_param, 1 + clip_param) * advantages.detach()
+                bounded_adv = torch.clamp(ratio, 1 - self.clip_param, 1 + self.clip_param) * advantages.detach()
                 
                 
                       

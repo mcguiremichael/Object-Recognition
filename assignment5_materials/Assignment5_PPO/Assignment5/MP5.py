@@ -28,8 +28,10 @@ rewards, episodes = [], []
 agent = Agent(action_size)
 
 # Added to continue training
-#agent.policy_net = torch.load("./save_model/spaceinvaders_ppo")
+
+#agent.policy_net.load_state_dict(torch.load("./save_model/spaceinvaders_ppo"))
 #agent.update_target_net()
+#agent.policy_net.train()
 
 evaluation_reward = deque(maxlen=evaluation_reward_length)
 frame = 0
@@ -89,7 +91,7 @@ for e in range(EPISODES):
             episodes.append(e)
             #pylab.plot(episodes, rewards, 'b')
             #pylab.savefig("./save_graph/spaceinvaders_ppo.png")
-            torch.save(agent.policy_net, "./save_model/spaceinvaders_ppo")
+            torch.save(agent.policy_net.state_dict(), "./save_model/spaceinvaders_ppo")
 
         if done:
             evaluation_reward.append(score)
@@ -101,7 +103,7 @@ for e in range(EPISODES):
             # if the mean of scores of last 10 episode is bigger than 400
             # stop training
             if np.mean(evaluation_reward) > 700 and len(evaluation_reward) > 40:
-                torch.save(agent.policy_net, "./save_model/spaceinvaders_ppo")
+                torch.save(agent.policy_net.state_dict(), "./save_model/spaceinvaders_ppo")
                 sys.exit()
                 
-torch.save(agent.policy_net, "./save_model/spaceinvaders_ppo")
+torch.save(agent.policy_net.state_dict(), "./save_model/spaceinvaders_ppo")
