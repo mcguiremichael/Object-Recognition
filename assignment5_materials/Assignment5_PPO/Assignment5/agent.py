@@ -74,7 +74,7 @@ class Agent():
         candidate = random.random()
         total = probs[0]
         i = 0
-        while (total < candidate and total < 1.0 and i < len(probs)):
+        while (total < candidate and total < 1.0 and i < len(probs)-1):
             i += 1
             total += probs[i]
 

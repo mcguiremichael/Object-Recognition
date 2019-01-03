@@ -29,9 +29,11 @@ agent = Agent(action_size)
 
 # Added to continue training
 
-#agent.policy_net.load_state_dict(torch.load("./save_model/spaceinvaders_ppo"))
-#agent.update_target_net()
-#agent.policy_net.train()
+"""
+agent.policy_net.load_state_dict(torch.load("./save_model/spaceinvaders_ppo"))
+agent.update_target_net()
+agent.policy_net.train()
+"""
 
 evaluation_reward = deque(maxlen=evaluation_reward_length)
 frame = 0
