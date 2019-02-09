@@ -231,7 +231,7 @@ class YoloLoss(nn.Module):
         Returns:
         Total Loss
         '''
-        print(pred_tensor.shape, target_tensor.shape)
+        #print(pred_tensor.shape, target_tensor.shape)
         N = pred_tensor.size()[0]
         
         boxes_pred_tensor = pred_tensor[:,:,:,:10]
@@ -370,7 +370,7 @@ class YoloLoss(nn.Module):
         total_loss += regression_loss
         total_loss += conf_loss
         
-        #print(np.array([class_prediction_loss.cpu().data.numpy(), no_object_loss.cpu().data.numpy(), regression_loss.cpu().data.numpy(), conf_loss.cpu().data.numpy()]))
+        print(np.array([class_prediction_loss.cpu().data.numpy(), no_object_loss.cpu().data.numpy(), regression_loss.cpu().data.numpy(), conf_loss.cpu().data.numpy()]))
         return (1/N) * total_loss
 
 
