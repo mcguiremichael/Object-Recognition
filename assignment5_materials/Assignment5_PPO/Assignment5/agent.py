@@ -50,7 +50,7 @@ class Agent():
         self.lr_min = learning_rate / 10
         self.clip_min = clip_param / 10
         self.clip_param = clip_param
-        self.decay_rate = 15000
+        self.decay_rate = 40000
         
         
 
@@ -83,7 +83,7 @@ class Agent():
     def entropy(self, probs):
         return -(torch.sum(probs * torch.log(probs), 1)).mean()
         
-    def train_policy_net(self, frame, frame_next_val):
+    def train_policy_net(self, frame, frame_next_vals):
     
         
         
@@ -95,7 +95,7 @@ class Agent():
         
         
         # Memory computes targets for value network, and advantag es for policy iteration
-        self.memory.compute_vtargets_adv(self.discount_factor, self.lam, frame_next_val)
+        self.memory.compute_vtargets_adv(self.discount_factor, self.lam, frame_next_vals)
         
         
         
