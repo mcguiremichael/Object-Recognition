@@ -39,7 +39,7 @@ class ReplayMemory(object):
         else:
             sample_range = frame
 
-        
+        depth = HISTORY_SIZE-1
             
 
         # history size
@@ -59,7 +59,7 @@ class ReplayMemory(object):
                 sample.append(self.memory[env_idx][frame_idx+j])
 
             sample = np.array(sample)
-            mini_batch.append([np.stack(sample[:, 0], axis=0), sample[3, 1], sample[3, 2], sample[3, 3], sample[3, 4], sample[3, 5], sample[3, 6]])
+            mini_batch.append([np.stack(sample[:, 0], axis=0), sample[depth, 1], sample[depth, 2], sample[depth, 3], sample[depth, 4], sample[depth, 5], sample[depth, 6]])
 
         self.access_num = (self.access_num + 1) % self.reset_num
         if (self.access_num == 0):
@@ -88,7 +88,14 @@ class ReplayMemory(object):
                 mem[j][6] = gae_t     # advantage
                 mem[j][5] = gae_t + mem[j][4]  # advantage + value
                 prev_gae_t = gae_t
-                            
+        """
+        for i in range(self.num_agents):
+            mem = self.memory[i]
+            for j in range(len(mem)):
+                print(mem[j][1:])
+        """
+        
+        
         """
         N = len(self)
         

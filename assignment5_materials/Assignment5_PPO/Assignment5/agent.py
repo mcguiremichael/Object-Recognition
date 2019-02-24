@@ -18,14 +18,14 @@ class Agent():
         self.load_model = False
 
         self.action_size = action_size
-        self.loss = nn.SmoothL1Loss()
+        self.loss = nn.MSELoss()
 
         # These are hyper parameters for the DQN
         self.discount_factor = 0.99
         self.lam = 0.95
         self.epsilon = 1.0
         self.epsilon_min = 0.05
-        self.eps_denom = 1e-4
+        self.eps_denom = 1.0e-8
         self.explore_step = 1000000
         self.epsilon_decay = (self.epsilon - self.epsilon_min) / self.explore_step
         self.train_start = 100000
@@ -34,14 +34,15 @@ class Agent():
         self.c2 = 0.01      # Weight for entropy loss
         self.num_epochs = 3
         self.num_epochs_trained = 0
+        self.num_frames_trained = 0
 
         # Generate the memory
         self.memory = ReplayMemory()
 
         # Create the policy net and the target net
-        self.policy_net = PPO(action_size)
+        self.policy_net = PPO(action_size, HISTORY_SIZE)
         self.policy_net.to(device)
-        self.target_net = PPO(action_size)
+        self.target_net = PPO(action_size, HISTORY_SIZE)
         self.target_net.to(device)
 
         self.optimizer = optim.Adam(params=self.policy_net.parameters(), lr=learning_rate)
@@ -50,7 +51,7 @@ class Agent():
         self.lr_min = learning_rate / 10
         self.clip_min = clip_param / 10
         self.clip_param = clip_param
-        self.decay_rate = 40000
+        self.decay_rate = 10000000
         
         
 
@@ -127,11 +128,11 @@ class Agent():
             self.num_epochs_trained += 1
             
             
-            if (self.num_epochs_trained < self.decay_rate and self.num_epochs_trained % 50 == 0):
-                new_lr = self.lr_min + (learning_rate - self.lr_min) * ((self.decay_rate - self.num_epochs_trained) / self.decay_rate)
+            if (self.num_frames_trained < self.decay_rate and self.num_epochs_trained % 50 == 0):
+                new_lr = self.lr_min + (learning_rate - self.lr_min) * ((self.decay_rate - self.num_frames_trained) / self.decay_rate)
                 del self.optimizer
                 self.optimizer = optim.Adam(params=self.policy_net.parameters(), lr=new_lr)
-                self.clip_param = self.clip_min + (clip_param - self.clip_min) * ((self.decay_rate - self.num_epochs_trained) / self.decay_rate)
+                self.clip_param = self.clip_min + (clip_param - self.clip_min) * ((self.decay_rate - self.num_frames_trained) / self.decay_rate)
             
         
         
@@ -148,7 +149,7 @@ class Agent():
                 mini_batch = np.array(mini_batch).transpose()
                 
                 history = np.stack(mini_batch[0], axis=0)
-                states = np.float32(history[:, :4, :, :]) / 255.
+                states = np.float32(history[:, :HISTORY_SIZE, :, :]) / 255.
                 actions = np.array(list(mini_batch[1]))
                 rewards = np.array(list(mini_batch[2]))
                 next_states = np.float32(history[:, 1:, :, :]) / 255.
@@ -173,7 +174,7 @@ class Agent():
                 
                 
                 # Normalize advantages
-                advantages = (advantages - advantages.mean()) / (advantages.std() + self.eps_denom)
+                #advantages = (advantages - advantages.mean()) / (advantages.std() + self.eps_denom)
                 
                 
                 # Loading time end
@@ -266,6 +267,8 @@ class Agent():
             
             print("load: %f\nforward: %f\nloss: %f\nclip: %f\nbackward: %f\nstep: %f\ntotal: %f\n" % (loading_time, forward_time, loss_time, clipping_time, backward_time, step_time, total_time))
             """
+        
+        self.num_frames_trained += train_frame
         
     def clip_gradients(self, clip):
         
