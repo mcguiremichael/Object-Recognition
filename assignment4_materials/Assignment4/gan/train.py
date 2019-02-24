@@ -1,5 +1,8 @@
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
+import scipy.misc
+import numpy as np
+import torch
 
 from gan.utils import sample_noise, show_images, deprocess_img, preprocess_img
 
@@ -42,6 +45,8 @@ def train(D, G, D_solver, G_solver, discriminator_loss, generator_loss, show_eve
     - device: PyTorch device
     """
     iter_count = 0
+    reference_noise = sample_noise(1, noise_size).to(device)
+    save_ref_every = 5
     for epoch in range(num_epochs):
         print('EPOCH: ', (epoch+1))
         for x, _ in train_loader:
@@ -96,4 +101,13 @@ def train(D, G, D_solver, G_solver, discriminator_loss, generator_loss, show_eve
                 show_images(imgs_numpy[0:16], color=input_channels!=1)
                 plt.show()
                 print()
+                
+            if (iter_count % save_ref_every == 0):
+                image = G(reference_noise)
+                img_array = image.cpu().data.numpy()[0,:,:,:]
+                img_array = np.swapaxes(np.swapaxes(img_array, 0, 1), 1, 2)
+                scipy.misc.imsave('outfile' + str(iter_count / save_ref_every) + '.png', img_array)
+                
             iter_count += 1
+        torch.save(D.state_dict(), "mydiscriminator.pt")
+        torch.save(G.state_dict(), "mygenerator.pt")

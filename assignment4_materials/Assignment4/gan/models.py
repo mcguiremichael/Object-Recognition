@@ -1,5 +1,5 @@
 import torch
-
+#torch.backends.cudnn.deterministic=True
 
 class Discriminator(torch.nn.Module):
     def __init__(self, input_channels=3):
@@ -9,10 +9,10 @@ class Discriminator(torch.nn.Module):
         #          YOUR CODE HERE          #
         ####################################
         FILTERS_1 = 128
-        FILTERS_2 = 256
-        FILTERS_3 = 512
-        FILTERS_4 = 1024
-        FILTERS_5 = 2048
+        FILTERS_2 = 128
+        FILTERS_3 = 256
+        FILTERS_4 = 512
+        FILTERS_5 = 1024
         
         
         self.conv1 = torch.nn.Conv2d(input_channels,
@@ -89,11 +89,19 @@ class Generator(torch.nn.Module):
         ####################################
         #          YOUR CODE HERE          #
         ####################################
-        FILTERS_1 = 2048
+        
+        FILTERS_1 = 1024
         FILTERS_2 = 1024
         FILTERS_3 = 512
         FILTERS_4 = 256
         FILTERS_5 = 128
+        FILTERS_6 = 128
+        """
+        self.embedding = torch.nn.Sequential(torch.nn.Linear(noise_dim, noise_dim),
+                                                    torch.nn.Tanh(),
+                                                    torch.nn.Linear(noise_dim, noise_dim),
+                                                    torch.nn.Tanh())
+        """
         
         self.tconv1 = torch.nn.ConvTranspose2d(noise_dim,
                                                     FILTERS_1,
@@ -119,34 +127,45 @@ class Generator(torch.nn.Module):
         
         self.conv3_bn = torch.nn.BatchNorm2d(FILTERS_3)
         
-        self.tconv4 = torch.nn.ConvTranspose2d(FILTERS_3,
+        self.conv = torch.nn.ConvTranspose2d(FILTERS_3,
                                                     FILTERS_4,
-                                                    kernel_size=4,
-                                                    padding=1,
-                                                    stride=2)
+                                                    kernel_size=1,
+                                                    stride=1)
+                                                    
+        self.conv_bn = torch.nn.BatchNorm2d(FILTERS_4)
         
-        self.conv4_bn = torch.nn.BatchNorm2d(FILTERS_4)
-        
-        self.tconv5 = torch.nn.ConvTranspose2d(FILTERS_4,
+        self.tconv4 = torch.nn.ConvTranspose2d(FILTERS_4,
                                                     FILTERS_5,
                                                     kernel_size=4,
                                                     padding=1,
                                                     stride=2)
-                                                    
-        self.conv5_bn = torch.nn.BatchNorm2d(FILTERS_5)
         
-        self.tconv6 = torch.nn.ConvTranspose2d(FILTERS_5,
-                                                    3,
+        self.conv4_bn = torch.nn.BatchNorm2d(FILTERS_5)
+        
+        
+        self.tconv5 = torch.nn.ConvTranspose2d(FILTERS_5,
+                                                    FILTERS_6,
                                                     kernel_size=4,
                                                     padding=1,
                                                     stride=2)
                                                     
+        self.conv5_bn = torch.nn.BatchNorm2d(FILTERS_6)
+        
+        self.tconv6 = torch.nn.ConvTranspose2d(FILTERS_6,
+                                                    3,
+                                                    kernel_size=4,
+                                                    padding=1,
+                                                    stride=2)
+                                                   
+                                                   
+        
         
         self.activation = torch.nn.functional.leaky_relu
         
         ##########       END      ##########
     
     def forward(self, x):
+        #x = self.embedding(x)
         x = x.reshape(-1, self.noise_dim, 1, 1)
         ####################################
         #          YOUR CODE HERE          #
@@ -154,6 +173,7 @@ class Generator(torch.nn.Module):
         x = self.activation(self.conv1_bn(self.tconv1(x)),negative_slope=0.2)
         x = self.activation(self.conv2_bn(self.tconv2(x)),negative_slope=0.2)
         x = self.activation(self.conv3_bn(self.tconv3(x)),negative_slope=0.2)
+        x = self.activation(self.conv_bn(self.conv(x)),negative_slope=0.2)
         x = self.activation(self.conv4_bn(self.tconv4(x)),negative_slope=0.2)
         x = self.activation(self.conv5_bn(self.tconv5(x)),negative_slope=0.2)
         x = torch.nn.functional.tanh(self.tconv6(x))
