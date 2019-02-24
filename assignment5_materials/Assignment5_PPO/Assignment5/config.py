@@ -11,4 +11,6 @@ Update_target_network_frequency = 1000
 train_frame = 1024
 Memory_capacity = train_frame
 clip_param = 0.1
+num_envs = 8
+env_mem_size = int(train_frame / num_envs)
 

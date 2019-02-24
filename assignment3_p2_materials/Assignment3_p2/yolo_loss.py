@@ -231,9 +231,9 @@ class YoloLoss(nn.Module):
         Returns:
         Total Loss
         '''
+        #print(pred_tensor.shape, target_tensor.shape)
         N = pred_tensor.size()[0]
         
-        total_loss = None
         boxes_pred_tensor = pred_tensor[:,:,:,:10]
         classes_pred_tensor = pred_tensor[:,:,:,10:]
         boxes_target_tensor = target_tensor[:,:,:,:10]
