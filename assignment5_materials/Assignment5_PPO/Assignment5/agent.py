@@ -64,22 +64,27 @@ class Agent():
 
     """Get action using policy net using action probabilities"""
     def get_action(self, state):
-        state = torch.from_numpy(state).to(device).unsqueeze(0)
+        if (len(state.shape)) == 1:
+            state = torch.from_numpy(state).to(device).unsqueeze(0)
+        else:
+            state = torch.from_numpy(state).to(device)
         probs, val = self.policy_net(state)
-        probs = probs.detach().cpu().numpy()[0]
-        val = val.detach().cpu().numpy()[0]
+        probs = probs.detach().cpu().numpy()
+        val = val.detach().cpu().numpy().flatten()
         action = self.select_action(probs)
         return action, val
         
     def select_action(self, probs):
-        candidate = random.random()
-        total = probs[0]
-        i = 0
-        while (total < candidate and total < 1.0 and i < len(probs)-1):
-            i += 1
-            total += probs[i]
-
-        return i
+        outs = []
+        for j in range(len(probs)):
+            candidate = random.random()
+            total = probs[j,0]
+            i = 0
+            while (total < candidate and total < 1.0 and i < len(probs[j])-1):
+                i += 1
+                total += probs[j,i]
+            outs.append(i)
+        return outs
         
     def entropy(self, probs):
         return -(torch.sum(probs * torch.log(probs), 1)).mean()
@@ -269,6 +274,9 @@ class Agent():
             """
         
         self.num_frames_trained += train_frame
+        
+    def normalize(self, x):
+        return (x - torch.mean(x)) / (torch.std(x) + self.eps_denom)
         
     def clip_gradients(self, clip):
         
