@@ -179,7 +179,7 @@ class Agent():
                 
                 
                 # Normalize advantages
-                #advantages = (advantages - advantages.mean()) / (advantages.std() + self.eps_denom)
+                advantages = (advantages - advantages.mean()) / (advantages.std() + self.eps_denom)
                 
                 
                 # Loading time end
@@ -221,7 +221,7 @@ class Agent():
                     print(ratio, ratio_adv, bounded_adv, pol_avg)  
                 """
                 ### Compute value and loss
-                value_loss = self.loss(curr_vals, v_returns.detach())
+                value_loss = self.loss(self.normalize(curr_vals), self.normalize(v_returns).detach())
                 
                 ent = self.entropy(curr_probs)
 
