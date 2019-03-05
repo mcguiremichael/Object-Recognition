@@ -25,7 +25,7 @@ class Agent():
         self.lam = 0.95
         self.epsilon = 1.0
         self.epsilon_min = 0.05
-        self.eps_denom = 1.0e-8
+        self.eps_denom = 1.0e-5
         self.explore_step = 1000000
         self.epsilon_decay = (self.epsilon - self.epsilon_min) / self.explore_step
         self.train_start = 100000
@@ -221,7 +221,7 @@ class Agent():
                     print(ratio, ratio_adv, bounded_adv, pol_avg)  
                 """
                 ### Compute value and loss
-                value_loss = self.loss(self.normalize(curr_vals), self.normalize(v_returns).detach())
+                value_loss = self.loss(curr_vals, v_returns.detach())
                 
                 ent = self.entropy(curr_probs)
 

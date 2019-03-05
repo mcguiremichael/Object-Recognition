@@ -2,7 +2,7 @@
 EPISODES = 500000
 HEIGHT = 84
 WIDTH = 84
-HISTORY_SIZE = 4
+HISTORY_SIZE = 8
 learning_rate = 2.5e-4
 evaluation_reward_length = 100
 render_breakout = True
