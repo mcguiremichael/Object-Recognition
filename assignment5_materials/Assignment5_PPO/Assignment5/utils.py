@@ -40,5 +40,5 @@ def get_score_range(name):
             if (reward < min_score):
                 min_score = reward
     return [min_score, max_score]
-        
+
         

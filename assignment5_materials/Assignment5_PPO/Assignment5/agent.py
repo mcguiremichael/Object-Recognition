@@ -64,7 +64,7 @@ class Agent():
 
     """Get action using policy net using action probabilities"""
     def get_action(self, state):
-        if (len(state.shape)) == 1:
+        if (len(state.shape)) == 3:
             state = torch.from_numpy(state).to(device).unsqueeze(0)
         else:
             state = torch.from_numpy(state).to(device)
