@@ -18,14 +18,14 @@ class Agent():
         self.load_model = False
 
         self.action_size = action_size
-        self.loss = nn.MSELoss()
+        self.loss = nn.SmoothL1Loss()
 
         # These are hyper parameters for the DQN
         self.discount_factor = 0.99
         self.lam = 0.95
         self.epsilon = 1.0
         self.epsilon_min = 0.05
-        self.eps_denom = 1.0e-5
+        self.eps_denom = 1.0e-4
         self.explore_step = 1000000
         self.epsilon_decay = (self.epsilon - self.epsilon_min) / self.explore_step
         self.train_start = 100000
@@ -106,7 +106,7 @@ class Agent():
         
         
         # Should be integer. len(self.memory) should be a multiple of batch_size.
-        num_iters = int(len(self.memory) / batch_size)
+        num_iters = int(len(self.memory.indices) / batch_size)
         
         """
         lambda1 = lambda epoch: self.lr_min + (learning_rate - self.lr_min) * ((self.decay_rate - self.num_epochs_trained) / self.decay_rate)
@@ -179,7 +179,7 @@ class Agent():
                 
                 
                 # Normalize advantages
-                advantages = (advantages - advantages.mean()) / (advantages.std() + self.eps_denom)
+                advantages = (advantages - advantages.mean()) / (torch.clamp(advantages.std(), self.eps_denom))
                 
                 
                 # Loading time end
@@ -208,7 +208,7 @@ class Agent():
                 t1 = time.time()
                 
                 ### Compute ratios
-                ratio = torch.exp(torch.log(curr_prob_select) - torch.log(old_prob_select.detach() + self.eps_denom))
+                ratio = torch.exp(torch.log(curr_prob_select) - torch.log(torch.clamp(old_prob_select.detach(), self.eps_denom)))
                 ratio_adv = ratio * advantages.detach()
                 bounded_adv = torch.clamp(ratio, 1 - self.clip_param, 1 + self.clip_param) * advantages.detach()
                 
@@ -284,6 +284,7 @@ class Agent():
         for param in self.policy_net.parameters():
             if param.grad is None:
                 continue
+            #print(torch.max(param.grad.data), torch.min(param.grad.data))
             param.grad.data = param.grad.data.clamp(-clip, clip)
             
     def displayStack(self, state):
