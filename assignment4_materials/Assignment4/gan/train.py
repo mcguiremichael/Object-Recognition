@@ -3,6 +3,7 @@ import matplotlib.gridspec as gridspec
 import scipy.misc
 import numpy as np
 import torch
+import torch.optim as optim
 
 from gan.utils import sample_noise, show_images, deprocess_img, preprocess_img
 
@@ -44,10 +45,15 @@ def train(D, G, D_solver, G_solver, discriminator_loss, generator_loss, show_eve
     - train_loader: image dataloader
     - device: PyTorch device
     """
+    lambda1 = lambda epoch: max(0.95 ** epoch, 0.25)
+    scheduler_G = optim.lr_scheduler.LambdaLR(G_solver, lr_lambda=lambda1)
+    scheduler_D = optim.lr_scheduler.LambdaLR(D_solver, lr_lambda=lambda1)
     iter_count = 0
     reference_noise = sample_noise(1, noise_size).to(device)
     save_ref_every = 5
     for epoch in range(num_epochs):
+        scheduler_G.step()
+        scheduler_D.step()
         print('EPOCH: ', (epoch+1))
         for x, _ in train_loader:
             _, input_channels, img_size, _ = x.shape
@@ -106,7 +112,7 @@ def train(D, G, D_solver, G_solver, discriminator_loss, generator_loss, show_eve
                 image = G(reference_noise)
                 img_array = image.cpu().data.numpy()[0,:,:,:]
                 img_array = np.swapaxes(np.swapaxes(img_array, 0, 1), 1, 2)
-                scipy.misc.imsave('outfile' + str(iter_count / save_ref_every) + '.png', img_array)
+                scipy.misc.imsave('outfile' + str(int(iter_count / save_ref_every)) + '.png', img_array)
                 
             iter_count += 1
         torch.save(D.state_dict(), "mydiscriminator.pt")
