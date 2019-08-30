@@ -5,7 +5,7 @@ import random
 
 
 class ReplayMemory(object):
-    def __init__(self):
+    def __init__(self, mode='PPO'):
         self.num_agents = num_envs
         assert(Memory_capacity % self.num_agents == 0)
         self.agent_mem_size = int(Memory_capacity / self.num_agents)
@@ -15,10 +15,14 @@ class ReplayMemory(object):
         self.update_indices()
         self.train_len = len(self.indices)
         self.reset_num = int(self.train_len / batch_size)
+        self.mode = mode
     
     def push(self, index, history, action, reward, done, vtarg, ret, adv):
         # history, action, reward, done, vtarg, adv
-        self.memory[index].append([history, action, reward, done, vtarg, ret, adv])
+        hidden = None
+        if self.mode == 'PPO_LSTM':
+            [history, hidden] = history
+        self.memory[index].append([history, action, reward, done, vtarg, ret, adv, hidden])
         
     def update_indices(self):
         self.indices = []
@@ -59,7 +63,7 @@ class ReplayMemory(object):
                 sample.append(self.memory[env_idx][frame_idx+j])
 
             sample = np.array(sample)
-            mini_batch.append([np.stack(sample[:, 0], axis=0), sample[depth, 1], sample[depth, 2], sample[depth, 3], sample[depth, 4], sample[depth, 5], sample[depth, 6]])
+            mini_batch.append([np.stack(sample[:, 0], axis=0), sample[depth, 1], sample[depth, 2], sample[depth, 3], sample[depth, 4], sample[depth, 5], sample[depth, 6], sample[0, 7]])
 
         self.access_num = (self.access_num + 1) % self.reset_num
         if (self.access_num == 0):

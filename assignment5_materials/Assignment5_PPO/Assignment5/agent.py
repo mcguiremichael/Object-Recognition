@@ -14,8 +14,9 @@ import matplotlib.pyplot as plt
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 class Agent():
-    def __init__(self, action_size):
+    def __init__(self, action_size, mode='PPO'):
         self.load_model = False
+        self.mode = mode
 
         self.action_size = action_size
         self.loss = nn.SmoothL1Loss()
@@ -37,12 +38,17 @@ class Agent():
         self.num_frames_trained = 0
 
         # Generate the memory
-        self.memory = ReplayMemory()
+        self.memory = ReplayMemory(mode=mode)
 
         # Create the policy net and the target net
-        self.policy_net = PPO(action_size, HISTORY_SIZE)
+        if (mode == 'PPO'):
+            self.policy_net = PPO(action_size, HISTORY_SIZE)
+            self.target_net = PPO(action_size, HISTORY_SIZE)
+        elif (mode == 'PPO_LSTM'):
+            self.policy_net = PPO_LSTM(action_size, 64, 1)
+            self.target_net = PPO_LSTM(action_size, 64, 1)
+        
         self.policy_net.to(device)
-        self.target_net = PPO(action_size, HISTORY_SIZE)
         self.target_net.to(device)
 
         self.optimizer = optim.Adam(params=self.policy_net.parameters(), lr=learning_rate)
@@ -63,16 +69,19 @@ class Agent():
         self.target_net.load_state_dict(self.policy_net.state_dict())
 
     """Get action using policy net using action probabilities"""
-    def get_action(self, state):
+    def get_action(self, state, hidden_state=None):
         if (len(state.shape)) == 3:
             state = torch.from_numpy(state).to(device).unsqueeze(0)
         else:
             state = torch.from_numpy(state).to(device)
-        probs, val = self.policy_net(state)
+        if self.mode == "PPO_LSTM":
+            probs, val, hidden_state = self.policy_net(state, hidden_state)
+        else:
+            probs, val = self.policy_net(state)
         probs = probs.detach().cpu().numpy()
         val = val.detach().cpu().numpy().flatten()
         action = self.select_action(probs)
-        return action, val
+        return action, val, hidden_state
         
     def select_action(self, probs):
         outs = []
@@ -161,6 +170,10 @@ class Agent():
                 dones = mini_batch[3]
                 v_returns = mini_batch[5].astype(np.float32)
                 advantages = mini_batch[6].astype(np.float32)
+                hiddens = mini_batch[7]
+                if (self.mode == 'PPO_LSTM'):
+                    hiddens = torch.from_numpy(np.stack(hiddens, axis=0)).to(device)
+                    hiddens.requires_grad = True
                 
                 
                 
@@ -192,9 +205,12 @@ class Agent():
                 n = states.shape[0]
                 actions = actions.reshape((n, 1))
                 
-                
-                curr_probs, curr_vals = self.policy_net(states)
-                old_probs, old_vals = self.target_net(states)
+                if (self.mode == 'PPO_LSTM'):
+                    curr_probs, curr_vals, _ = self.policy_net.forward_unroll(states, hiddens, unroll_steps=HISTORY_SIZE)
+                    old_probs, old_vals, _ = self.target_net.forward_unroll(states, hiddens, unroll_steps=HISTORY_SIZE)
+                else:
+                    curr_probs, curr_vals = self.policy_net(states)
+                    old_probs, old_vals = self.target_net(states)
                 
                 
                 curr_prob_select = curr_probs.gather(1, actions).reshape((n,))
@@ -274,6 +290,9 @@ class Agent():
             """
         
         self.num_frames_trained += train_frame
+        
+    def init_hidden(self):
+        return self.policy_net.init_hidden()
         
     def normalize(self, x):
         return (x - torch.mean(x)) / (torch.std(x) + self.eps_denom)
