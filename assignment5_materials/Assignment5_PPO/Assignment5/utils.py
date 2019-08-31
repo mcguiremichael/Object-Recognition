@@ -29,7 +29,7 @@ def get_score_range(name):
     n = env.action_space.n
     max_score = -np.inf
     min_score = np.inf
-    for i in range(20):
+    for i in range(100):
         done = False
         env.reset()
         while not done:

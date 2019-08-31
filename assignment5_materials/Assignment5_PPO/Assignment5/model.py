@@ -55,7 +55,7 @@ class PPO_LSTM(nn.Module):
         #self.bn1 = nn.BatchNorm2d(32)
         self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=2)
         #self.bn2 = nn.BatchNorm2d(64)
-        self.conv3 = nn.Conv2d(hidden_size, 64, kernel_size=3, stride=1, padding=1)
+        self.conv3 = nn.Conv2d(hidden_size+64, 64, kernel_size=3, stride=1, padding=1)
         #self.bn3 = nn.BatchNorm2d(64)
         
         self.lstm = ConvLSTM(64, hidden_size)
@@ -65,7 +65,8 @@ class PPO_LSTM(nn.Module):
     def forward(self, x, hidden):
         x = F.leaky_relu(self.conv1(x))
         x = F.leaky_relu(self.conv2(x))
-        x, hidden = self.lstm(x, hidden)
+        output, hidden = self.lstm(x, hidden)
+        x = torch.cat([x, output], dim=1)
         x = F.leaky_relu(self.conv3(x))
         x = F.leaky_relu(self.fc(x.view(x.size(0), -1)))
         x = self.head(x)
@@ -82,7 +83,8 @@ class PPO_LSTM(nn.Module):
         features = features.view((s[:2]) + (features.shape[1:]))
         for i in range(unroll_steps):
             outputs, hiddens = self.lstm(features[:,i], hiddens)
-        x = F.leaky_relu(self.conv3(outputs))
+        x = torch.cat([features[:,-1], outputs], dim=1)
+        x = F.leaky_relu(self.conv3(x))
         x = F.leaky_relu(self.fc(x.view(x.size(0), -1)))
         x = self.head(x)
         
