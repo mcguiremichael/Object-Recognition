@@ -1,16 +1,19 @@
 import random
 import numpy as np
 from collections import deque
+import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 from torch.autograd import Variable
+torch.backends.cudnn.benchmarks = True
 from memory import ReplayMemory
 from model import *
 from utils import *
 from config import *
 import time
 import matplotlib.pyplot as plt
+from torch.nn.utils import clip_grad_norm_
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 class Agent():
@@ -26,7 +29,7 @@ class Agent():
         self.lam = 0.95
         self.epsilon = 1.0
         self.epsilon_min = 0.05
-        self.eps_denom = 1.0e-4
+        self.eps_denom = 1.0e-5
         self.explore_step = 1000000
         self.epsilon_decay = (self.epsilon - self.epsilon_min) / self.explore_step
         self.train_start = 100000
@@ -44,6 +47,9 @@ class Agent():
         if (mode == 'PPO'):
             self.policy_net = PPO(action_size, HISTORY_SIZE)
             self.target_net = PPO(action_size, HISTORY_SIZE)
+        elif (mode == 'PPO_MHDPA'):
+            self.policy_net = PPO_MHDPA(action_size, HISTORY_SIZE)
+            self.target_net = PPO_MHDPA(action_size, HISTORY_SIZE)
         elif (mode == 'PPO_LSTM'):
             self.policy_net = PPO_LSTM(action_size, 64, 1)
             self.target_net = PPO_LSTM(action_size, 64, 1)
@@ -51,7 +57,7 @@ class Agent():
         self.policy_net.to(device)
         self.target_net.to(device)
 
-        self.optimizer = optim.Adam(params=self.policy_net.parameters(), lr=learning_rate)
+        self.optimizer = optim.Adam(params=self.policy_net.parameters(), lr=learning_rate, eps=1e-4)
         
         # Added for learning rate decay
         self.lr_min = learning_rate / 10
@@ -96,7 +102,7 @@ class Agent():
         return outs
         
     def entropy(self, probs):
-        return -(torch.sum(probs * torch.log(probs), 1)).mean()
+        return - (probs * torch.log(probs)).mean()
         
     def train_policy_net(self, frame, frame_next_vals):
     
@@ -192,7 +198,7 @@ class Agent():
                 
                 
                 # Normalize advantages
-                advantages = (advantages - advantages.mean()) / (torch.clamp(advantages.std(), self.eps_denom))
+                # advantages = (advantages - advantages.mean()) / (torch.clamp(advantages.std(), self.eps_denom))
                 
                 
                 # Loading time end
@@ -207,10 +213,12 @@ class Agent():
                 
                 if (self.mode == 'PPO_LSTM'):
                     curr_probs, curr_vals, _ = self.policy_net.forward_unroll(states, hiddens, unroll_steps=HISTORY_SIZE)
-                    old_probs, old_vals, _ = self.target_net.forward_unroll(states, hiddens, unroll_steps=HISTORY_SIZE)
+                    with torch.no_grad():
+                        old_probs, old_vals, _ = self.target_net.forward_unroll(states, hiddens, unroll_steps=HISTORY_SIZE)
                 else:
                     curr_probs, curr_vals = self.policy_net(states)
-                    old_probs, old_vals = self.target_net(states)
+                    with torch.no_grad():
+                        old_probs, old_vals = self.target_net(states)
                 
                 
                 curr_prob_select = curr_probs.gather(1, actions).reshape((n,))
@@ -239,7 +247,7 @@ class Agent():
                 ### Compute value and loss
                 value_loss = self.loss(curr_vals, v_returns.detach())
                 
-                ent = self.entropy(curr_probs)
+                ent = self.entropy(curr_prob_select)
 
                 total_loss = pol_avg + self.c1 * value_loss - self.c2 * ent
                 
@@ -258,7 +266,7 @@ class Agent():
                 # Clipping time begin
                 t1 = time.time()
                 
-                #self.clip_gradients(1.0)
+                clip_grad_norm_(self.policy_net.parameters(), 50.0)
                 
                 # Clipping time end
                 clipping_time += (time.time() - t1)
