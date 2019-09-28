@@ -57,7 +57,7 @@ class Agent():
         self.policy_net.to(device)
         self.target_net.to(device)
 
-        self.optimizer = optim.Adam(params=self.policy_net.parameters(), lr=learning_rate, eps=1e-4)
+        self.optimizer = optim.Adam(params=self.policy_net.parameters(), lr=learning_rate, eps=1e-8)
         
         # Added for learning rate decay
         self.lr_min = learning_rate / 10
@@ -281,9 +281,9 @@ class Agent():
                 step_time += (time.time() - t1)
                 
                 
-                pol_loss += pol_avg.detach().cpu()[0]
-                vf_loss += value_loss.detach().cpu()[0]
-                ent_total += ent.detach().cpu()[0]
+                pol_loss += pol_avg.detach().cpu().item()
+                vf_loss += value_loss.detach().cpu().item()
+                ent_total += ent.detach().cpu().item()
                 
             pol_loss /= num_iters
             vf_loss /= num_iters

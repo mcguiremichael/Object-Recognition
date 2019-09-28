@@ -55,23 +55,38 @@ class PPO_MHDPA(nn.Module):
     def __init__(self, action_size, depth, device="cuda:0"):
         super(PPO_MHDPA, self).__init__()
         self.action_size = action_size
-        self.conv1 = nn.Conv2d(depth+2, 32, kernel_size=8, stride=4, padding=4)
+        self.conv1 = nn.Conv2d(depth+2, 16, kernel_size=5, stride=2, padding=2)
         #self.bn1 = nn.BatchNorm2d(32)
-        self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=2)
+        self.conv2 = nn.Conv2d(16, 32, kernel_size=4, stride=2, padding=2)
         #self.bn2 = nn.BatchNorm2d(64)
-        self.block4 = nn.Sequential(
-            SelfAttentionBlock(
+        self.attentionBlock1 = nn.Sequential(
+            RelationalModule(
+                32, 32, 2
+            ),
+            RelationalModule(
                 64, 32, 2
             ),
-            SelfAttentionBlock(
+            RelationalModule(
                 64, 32, 2
+            ),
+            nn.MaxPool2d(2)
+        )
+        self.attentionBlock2 = nn.Sequential(
+            RelationalModule(
+                64, 64, 2
+            ),
+            RelationalModule(
+                128, 64, 2
+            ),
+            RelationalModule(
+                128, 64, 2
             )
         )
-        self.conv3 = nn.Conv2d(64, 64, kernel_size=4, stride=2, padding=1)
+        self.conv3 = nn.Conv2d(128, 128, kernel_size=4, stride=2, padding=2)
         
         
         #self.bn3 = nn.BatchNorm2d(64)
-        self.fc = nn.Linear(2304, 512)
+        self.fc = nn.Linear(4608, 512)
         self.head = nn.Linear(512, action_size+1)
         
         width = 84
@@ -85,7 +100,8 @@ class PPO_MHDPA(nn.Module):
         x = torch.cat([local_coords, x], dim=1)
         x = F.leaky_relu(self.conv1(x))
         x = F.leaky_relu(self.conv2(x))
-        x = self.block4(x)
+        x = self.attentionBlock1(x)
+        x = self.attentionBlock2(x)
         x = F.leaky_relu(self.conv3(x))
         x = x.view(x.size(0), -1)
         x = F.leaky_relu(self.fc(x))
@@ -97,7 +113,7 @@ class PPO_MHDPA(nn.Module):
         return probs, val
     
 class PPO_LSTM(nn.Module):
-    def __init__(self, action_size, hidden_size=128, depth=1):
+    def __init__(self, action_size, hidden_size=64, depth=1):
         super(PPO_LSTM, self).__init__()
         self.action_size = action_size
         self.conv1 = nn.Conv2d(depth, 32, kernel_size=8, stride=4, padding=4)
@@ -350,6 +366,28 @@ class SelfAttentionBlock(nn.Module):
         output = output.permute(0,2,1).contiguous().view((N, -1, H, W))
 
         return output
+    
+class RelationalModule(nn.Module):
+
+    def __init__(self, in_size, num_features, num_heads, encode=True):
+        super(RelationalModule, self).__init__()
+        self.in_size=in_size
+        self.num_features=num_features
+        self.num_heads=num_heads
+        self.encode = encode
+        self.net_encoding = nn.Conv2d(in_size, num_heads*num_features, kernel_size=1, stride=1, padding=0)
+        self.mhdpa = nn.TransformerEncoderLayer(num_heads*num_features, num_heads, dim_feedforward=num_features)
+
+    def forward(self, x):
+        if (self.encode and self.in_size != self.num_heads*self.num_features):
+            x = self.net_encoding(x)
+        (N, D, H, W) = x.shape
+        new_x = x.permute(0, 2, 3, 1)
+        new_x = new_x.flatten(start_dim=1, end_dim=-2)
+        output = self.mhdpa(new_x)
+        output = output.permute(0,2,1).contiguous().view((N, -1, H, W))
+        return output
+
 
 class ResnetBlock(nn.Module):
     def __init__(self, num_features, num_layers):
