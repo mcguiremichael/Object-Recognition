@@ -61,32 +61,26 @@ class PPO_MHDPA(nn.Module):
         #self.bn2 = nn.BatchNorm2d(64)
         self.attentionBlock1 = nn.Sequential(
             RelationalModule(
-                32, 32, 2
+                32, 16, 2
             ),
             RelationalModule(
-                64, 32, 2
-            ),
-            RelationalModule(
-                64, 32, 2
+                32, 16, 2
             ),
             nn.MaxPool2d(2)
         )
         self.attentionBlock2 = nn.Sequential(
             RelationalModule(
-                64, 64, 2
+                32, 32, 2
             ),
             RelationalModule(
-                128, 64, 2
-            ),
-            RelationalModule(
-                128, 64, 2
+                64, 32, 2
             )
         )
-        self.conv3 = nn.Conv2d(128, 128, kernel_size=4, stride=2, padding=2)
+        self.conv3 = nn.Conv2d(64, 64, kernel_size=4, stride=2, padding=2)
         
         
         #self.bn3 = nn.BatchNorm2d(64)
-        self.fc = nn.Linear(4608, 512)
+        self.fc = nn.Linear(2304, 512)
         self.head = nn.Linear(512, action_size+1)
         
         width = 84
