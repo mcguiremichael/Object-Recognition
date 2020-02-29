@@ -60,7 +60,7 @@ class Agent():
             state = torch.from_numpy(state).to(device).unsqueeze(0)
             vals = self.policy_net(state)
             maxQ, a = torch.max(vals, dim=1)
-            return a
+            return a.item()
 
     # pick samples randomly from replay memory (with batch_size)
     def train_policy_net(self, frame):
@@ -75,14 +75,14 @@ class Agent():
         actions = np.array(list(mini_batch[1]))
         rewards = np.array(list(mini_batch[2]))
         next_states = np.float32(history[:, 1:, :, :]) / 255.
-        dones = mini_batch[3] # checks if the game is over
-        
+        dones = mini_batch[3].astype(np.bool) # checks if the game is over
+
         ### Converts everything to tensor
         states = torch.from_numpy(states).to(device)
         actions = torch.from_numpy(actions).to(device)
         rewards = torch.from_numpy(rewards).float().to(device)
         next_states = torch.from_numpy(next_states).to(device)
-        dones = torch.from_numpy(np.uint8(dones)).to(device)
+        dones = torch.from_numpy(dones).to(device)
         
         # Compute Q(s_t, a) - Q of the current state
         ### CODE ####
@@ -92,7 +92,7 @@ class Agent():
         
         # Compute Q function of next state
         ### CODE ####
-        nonterminals = 1-dones
+        nonterminals = ~ dones
         next_in = next_states[nonterminals]
         targ_next = self.target_net(next_in)
         
